@@ -210,7 +210,7 @@ doCrossValidation<-function(cond1.data,cond2.data,CV.pathwayList){
 
       pathCond.cols<-nrow(pathwayNDataCond1.order)
       gene.pairs <-(pathCond.cols*(pathCond.cols-1))/2
-
+      print(gene.pairs)
       cond1.matrix<-matrix(, nrow = gene.pairs)
       cond2.matrix<-matrix(, nrow = gene.pairs)
       hold.matrix<-matrix(, nrow = gene.pairs)
@@ -271,10 +271,11 @@ doPermutations<-function(expr.data, pathway.list, nCond1, nCond2,  PathwayAccura
 }
 
 #Load: File of interest, columns are samples, rows are genes w/ row 1 as sample identifier and row 2 as binary case/control status
+load("/Users/alisonpaquette/Documents/Project 1. Preterm Birth/1021PTBStratifiedAnalysis/1021sPTBvsPET.Rdata")
 #load("~/DATA/1021sPTBvsPET.Rdata")
 TindexDir<-DATA[2,]
 TindexDir[TindexDir=="N"]<- 0 #Change this to your REF variable of Interest
-TindexDir[TindexDir=="Y"]<-1 #Change this to your PET variable of Interest
+TindexDir[TindexDir=="Y"]<-1 #Change this to your CASE variable of Interest
 
 Texpr.data<-DATA[-c(1:2),]
 
@@ -289,6 +290,8 @@ nCond1<-ncol(Tdata.Cond1)
 nCond2<-ncol(Tdata.Cond2)
 
 #path.file is derived from msdb.  Can use Biocarta, Kegg, GO BP, excetera.  GOBP is too large to run, biocarta works best.
+path.File<-"/Users/alisonpaquette/Documents/General Price Lab notes/GSEA Files/GSEAentrez2biocarta.gmt" #need to get from msig database, this is name of pathway and all the genes.  Can change to whatever you want
+
 #path.File<-"~/GSEA msdb/GSEAentrez2biocarta.gmt"
 Tpathway.list<-readPathway(path.File, Tdirac.data) #Looks for genes from each pathway. if any pathway has less than 5 pathway, it gets rid of
 print(length(Tpathway.list)) #how many pathways are you counting?
@@ -298,9 +301,9 @@ TPathwayAccuracy<-runDirac(Tdata.Cond1, Tdata.Cond2, Tpathway.list,  Tpathway.Ac
 CVaccuracy<-doCrossValidation(Tdata.Cond1, Tdata.Cond2,Tpathway.list) #LO1 Cross validation: is fairly computationally intensive
 
 set.seed(2334)#random number
-##Permutations/Core.  Total permutations =permuations * cores.
-permutations = 100
-cores= 10
+##Permutations/Core.  Total permutations =permuations * cores. #Should be 1000!
+permutations = 10 #100
+cores= 2 #10
 storeResultsT<-doPermutations(Tdirac.data, Tpathway.list, nCond1, nCond2,  TPathwayAccuracy, Tcalculated.Accuracy, CVaccuracy, permutations, cores)
 
 colnames(storeResultsT)<-c("Pathway","PathwayAccuracy","PValue","BH Q Value","CV ACC")
