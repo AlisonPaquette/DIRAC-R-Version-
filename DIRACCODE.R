@@ -166,64 +166,79 @@ permuteDirac<-function(dirac.data,pathway.List, nCond1, nCond2, pathway.Differen
   }
   return(calculated.Accuracy)
 }
+
+#Note: CV accuracy is corrected
 doCrossValidation<-function(cond1.data,cond2.data,CV.pathwayList){
 
   CVaccuracy<-vector('numeric',length(CV.pathwayList) )
   index<-vector('character',length = (ncol(cond1.data) + ncol(cond2.data)))
-  index[1:ncol(cond1.data)] = "0"
-  index[(ncol(cond1.data)+1):(ncol(cond1.data) + ncol(cond2.data))] = "1"
+  index[1:ncol(cond1.data)] = "1"
+  index[(ncol(cond1.data)+1):(ncol(cond1.data) + ncol(cond2.data))] = "0"
+  #print(index)
 
   CVaccuracy[1:length(CV.pathwayList)] = 0
   rank.difference<-vector('numeric',length(CV.pathwayList))
   dirac.data<-cbind(cond1.data,cond2.data)
-
+  #dim(dirac.data)
   for (samples in 1:ncol(dirac.data)){
 
+    print(samples)
     pathway.accuracy<-vector('numeric',length(CV.pathwayList))
     cvData<-dirac.data[,-samples]
     cvIndex<-index[-samples]
     holdData<-as.matrix(dirac.data[,samples])
     holdIndex<-index[samples]
+
     rownames(holdData)<-rownames(dirac.data)
-
-    data1<-which(cvIndex == 0) ##This needs to be changed every time you change OUI
-    data2<-which(cvIndex == 1) ##This needs to be changed every time you change OUI
-
+    #print(dim(holdData))
+    #print(holdIndex)
+    data1<-which(cvIndex == "1")
+    data2<-which(cvIndex == "0")
+    #print(data1)
     data.Cond1<-cvData[,data1]
     data.Cond2<-cvData[,data2]
     cvPathway.Accuracy<-vector('numeric',length(CV.pathwayList))
 
     nCond1<-ncol(data.Cond1)
     nCond2<-ncol(data.Cond2)
-
+    #print(dim(dirac.data))
     for (pathwayN in 1:length(CV.pathwayList)){
 
       namesDIR<-as.matrix(CV.pathwayList[[pathwayN]])
+
       pathwayNdata.Cond1<-data.Cond1[which(rownames(data.Cond1) %in% namesDIR[,1]),]
       pathwayNdata.Cond2<-data.Cond2[which(rownames(data.Cond2) %in% namesDIR[,1]),]
-
+      #print(dim(pathwayNdata.Cond1))
+      #print(which(rownames(holdData) %in% namesDIR[,1]))
       holdDataGenes<-holdData[which(rownames(holdData) %in% namesDIR[,1]),]
-
+      #print(holdDataGenes)
       pathwayNDataCond1.order = apply(pathwayNdata.Cond1,2, rank)
       pathwayNDataCond2.order = apply(pathwayNdata.Cond2,2, rank)
       holdDataGenes.order     = as.matrix(rank(holdDataGenes))
 
       pathCond.cols<-nrow(pathwayNDataCond1.order)
+      #print(pathCond.cols)
+
       gene.pairs <-(pathCond.cols*(pathCond.cols-1))/2
-      print(gene.pairs)
+
+
+
       cond1.matrix<-matrix(, nrow = gene.pairs)
       cond2.matrix<-matrix(, nrow = gene.pairs)
       hold.matrix<-matrix(, nrow = gene.pairs)
 
+      #pathCond<-as.matrix(holdDataGenes.order[,sample.Count])
       cond1.list<-doPairWise(pathwayNDataCond1.order,gene.pairs)
       cond2.list<-doPairWise(pathwayNDataCond2.order,gene.pairs)
+      #print(holdDataGenes.order)
       hold.list<-rankVector(holdDataGenes.order, nrow(holdDataGenes.order), gene.pairs)
 
-
+      #print(hold.list)
       total.Matrix<-cbind(cond1.list[[1]],cond2.list[[1]])
       template1<-cond1.list[[2]]
       template2<-cond2.list[[2]]
-
+      #print(which(hold.list != template1))
+      #print(which(hold.list != template2))
 
       different1<-which(hold.list != template1)
       percentage.different1 = 1-(length(different1)/gene.pairs)
@@ -232,23 +247,37 @@ doCrossValidation<-function(cond1.data,cond2.data,CV.pathwayList){
       different2<-which(hold.list != template2)
       percentage.different2= 1-(length(different2)/gene.pairs)
       rank.conservation2 = percentage.different2
-
+      print(rank.conservation1)
+      print(rank.conservation2)
       rank.difference = rank.conservation1 - rank.conservation2
+      print(rank.difference)
       if(rank.difference > 0 & holdIndex == 1)
       {
         CVaccuracy[pathwayN] = CVaccuracy[pathwayN] +1
       }
       else if(rank.difference < 0 & holdIndex == 0)
+
       {
         CVaccuracy[pathwayN] = CVaccuracy[pathwayN] +1
       }
+      else if(rank.difference == 0 )
 
+      {
+        CVaccuracy[pathwayN] = CVaccuracy[pathwayN] + 0.5
+      }
+      #rank.difference[pathwayN] = rank.conservation1 - rank.conservation2
+      #print(rank.difference)
+      #pathway.accuracy[pathwayN] = calculateAccuracy(rank.difference,nCond1,nCond2)
+      #print(CVaccuracy)
 
     }
-
+    #print(pathway.accuracy)
   }
+  print((CVaccuracy/(ncol(dirac.data))))
   return((CVaccuracy/(ncol(dirac.data))))
 }
+
+
 #Note: do Permutations is corrected from vineets code
 doPermutations<-function(expr.data, pathway.list, nCond1, nCond2,  PathwayAccuracy, calculated.Accuracy, CVaccuracy, permutations, cores){
 
@@ -304,6 +333,9 @@ set.seed(2334)#random number
 ##Permutations/Core.  Total permutations =permuations * cores. #Should be 1000!
 permutations = 10 #100
 cores= 2 #10
+
+permutations = 50
+cores= 20
 storeResultsT<-doPermutations(Tdirac.data, Tpathway.list, nCond1, nCond2,  TPathwayAccuracy, Tcalculated.Accuracy, CVaccuracy, permutations, cores)
 
 colnames(storeResultsT)<-c("Pathway","PathwayAccuracy","PValue","BH Q Value","CV ACC")
